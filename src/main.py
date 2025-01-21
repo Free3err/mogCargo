@@ -7,7 +7,7 @@ from .scripts import terminate
 from .cfg.config import Config
 from .constants import Font
 
-FPS = 60
+FPS = 144
 
 
 class Game:
@@ -55,6 +55,9 @@ class Game:
         team_text_rect = team_text.get_rect(center=(self.screen.get_width()//2, self.screen.get_height()//2))
         
         for alpha in range(0, 255, 5):
+            for event in pygame.event.get():
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                    return
             start_surface.fill((0, 0, 0))
             developer_text.set_alpha(alpha)
             start_surface.blit(developer_text, developer_text_rect)
@@ -64,6 +67,9 @@ class Game:
 
         pygame.time.delay(1000)
         for alpha in range(255, 0, -5):
+            for event in pygame.event.get():
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                    return
             start_surface.fill((0, 0, 0))
             developer_text.set_alpha(alpha)
             start_surface.blit(developer_text, developer_text_rect)
@@ -72,6 +78,9 @@ class Game:
             pygame.time.delay(5)
         
         for alpha in range(0, 255, 5):
+            for event in pygame.event.get():
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                    return
             start_surface.fill((0, 0, 0))
             team_text.set_alpha(alpha)
             start_surface.blit(team_text, team_text_rect)
@@ -81,6 +90,9 @@ class Game:
 
         pygame.time.delay(1000)
         for alpha in range(255, 0, -5):
+            for event in pygame.event.get():
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                    return
             start_surface.fill((0, 0, 0))
             team_text.set_alpha(alpha)
             start_surface.blit(team_text, team_text_rect)
@@ -126,14 +138,34 @@ class Game:
                     elif isinstance(self.hud, SettingsMenu):
                         if self.hud.elements["up_btn"].collidepoint(mouse_pos):
                             self.set_key("up")
-                        elif self.hud.elements["down_btn"].collidepoint(mouse_pos):
-                            self.set_key("down")
+                        elif self.hud.elements["break_btn"].collidepoint(mouse_pos):
+                            self.set_key("break")
                         elif self.hud.elements["left_btn"].collidepoint(mouse_pos):
                             self.set_key("left")
                         elif self.hud.elements["right_btn"].collidepoint(mouse_pos):
                             self.set_key("right")
+                        elif self.hud.elements["boost_btn"].collidepoint(mouse_pos):
+                            self.set_key("boost")
+                        elif self.hud.elements["shot_btn"].collidepoint(mouse_pos):
+                            self.set_key("shot")
+                        elif self.hud.elements["shield_btn"].collidepoint(mouse_pos):
+                            self.set_key("shield")
+                        elif self.hud.elements["interaction_btn"].collidepoint(mouse_pos):
+                            self.set_key("interaction")
                         elif self.hud.elements["back"].collidepoint(mouse_pos):
                             self.hud = self.huds["main"]
+                        elif self.hud.elements["next_page"].collidepoint(mouse_pos):
+                            self.hud.current_page += 1
+                        elif self.hud.elements["prev_page"].collidepoint(mouse_pos):
+                            self.hud.current_page -= 1
+                            
+                    elif isinstance(self.hud, EducationMenu):
+                        if self.hud.elements["back"].collidepoint(mouse_pos):
+                            self.hud = self.huds["main"]
+                        elif self.hud.elements["next_page"].collidepoint(mouse_pos):
+                            self.hud.current_page += 1
+                        elif self.hud.elements["prev_page"].collidepoint(mouse_pos):
+                            self.hud.current_page -= 1
 
             self.render()
             pygame.display.flip()

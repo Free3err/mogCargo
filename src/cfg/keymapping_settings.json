@@ -1,6 +1,11 @@
 {
-    "up": 119,
+    "up": 99,
+    "break": 9,
+    "left": 101,
+    "right": 100,
     "down": 115,
-    "left": 119,
-    "right": 100
+    "boost": 1073742049,
+    "shot": 13,
+    "shield": 113,
+    "interaction": 101
 }
