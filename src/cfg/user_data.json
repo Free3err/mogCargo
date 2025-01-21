@@ -1,0 +1,11 @@
+{
+    "exp": 0,
+    "level": 0,
+    "level_percent": 0.0,
+    "credits": 0,
+    "boost_time": 10,
+    "boost_cooldown": 120,
+    "shield_time": 15,
+    "shield_cooldown": 120,
+    "interaction_cooldown": 0
+}

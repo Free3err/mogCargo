@@ -13,7 +13,7 @@ class Font:
     }
 
 developer_elem = Font.MINECRAFT_FONT["small"].render(
-    "© free3err. MIT License", True, (255, 255, 255)
+    "© free3err. GNU GPL v3.0 License", True, (255, 255, 255)
 )
 version_elem = Font.MINECRAFT_FONT["small"].render(
     "v0.1.2", True, (255, 255, 255)

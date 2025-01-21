@@ -4,6 +4,7 @@ import json
 from ctypes import windll
 
 from ..constants import Font, developer_elem, version_elem
+from ..cfg import Config
 
 user32 = windll.user32
 SCREEN_WIDTH = user32.GetSystemMetrics(0)
@@ -17,10 +18,10 @@ def get_key(key):
     with open("src/cfg/keymapping_settings.json", "r") as f:
         keymapping = json.load(f)
     key_code = keymapping[key]
-    
+
     special_keys = {
         pygame.K_LSHIFT: "LShift",
-        pygame.K_RSHIFT: "RShift", 
+        pygame.K_RSHIFT: "RShift",
         pygame.K_LCTRL: "LCtrl",
         pygame.K_RCTRL: "RCtrl",
         pygame.K_LALT: "LAlt",
@@ -32,7 +33,7 @@ def get_key(key):
         pygame.K_CAPSLOCK: "CapsLock",
         pygame.K_BACKSPACE: "Backspace",
         pygame.K_F1: "F1",
-        pygame.K_F2: "F2", 
+        pygame.K_F2: "F2",
         pygame.K_F3: "F3",
         pygame.K_F4: "F4",
         pygame.K_F5: "F5",
@@ -42,20 +43,27 @@ def get_key(key):
         pygame.K_F9: "F9",
         pygame.K_F10: "F10",
         pygame.K_F11: "F11",
-        pygame.K_F12: "F12"
+        pygame.K_F12: "F12",
     }
-    
+
     if key_code in special_keys:
         return special_keys[key_code]
-    
+
     return chr(key_code).upper()
 
-class ScrollableHUD():
+
+def get_user_data(key):
+    with open("src/cfg/user_data.json", "r") as f:
+        user_data = json.load(f)
+    return user_data[key]
+
+
+class ScrollableHUD:
     def __init__(self):
         super().__init__()
         self.current_page = 1
         self.max_pages = 2
-        
+
         self.buttons = {
             "next_page": pygame.Rect(
                 CENTER_X + 200,
@@ -70,7 +78,7 @@ class ScrollableHUD():
                 60,
             ),
         }
-    
+
     def render(self, surface, bg_color=(15, 7, 36)):
         surface.fill(bg_color)
 
@@ -95,9 +103,16 @@ class ScrollableHUD():
             value = self.elements[key]
             if isinstance(value, pygame.Rect):
                 rect = pygame.Surface((value.width, value.height))
-                rect.fill((50, 50, 50))
+                rect.fill(
+                    self.additions["rect_color"]
+                    if f"{key}_color" not in self.additions
+                    else self.additions[f"{key}_color"]
+                )
                 surface.blit(rect, value)
-                if "button_texts" in self.additions and key in self.additions["button_texts"]:
+                if (
+                    "button_texts" in self.additions
+                    and key in self.additions["button_texts"]
+                ):
                     text = Font.MINECRAFT_FONT["text"].render(
                         self.additions["button_texts"][key], True, (255, 255, 255)
                     )
@@ -113,6 +128,7 @@ class ScrollableHUD():
 
         mouse_pos = pygame.mouse.get_pos()
         surface.blit(self.cursor, (mouse_pos[0], mouse_pos[1]))
+
 
 class HUD:
     def __init__(self):
@@ -156,7 +172,7 @@ class HUD:
             surface.blit(
                 pygame.transform.scale(
                     self.additions["background"],
-                    (SCREEN_WIDTH + 100, SCREEN_HEIGHT + 100),
+                    (SCREEN_WIDTH + 150, SCREEN_HEIGHT + 150),
                 ),
                 (0, 0),
             )
@@ -164,9 +180,16 @@ class HUD:
         for key, value in self.elements.items():
             if isinstance(value, pygame.Rect):
                 rect = pygame.Surface((value.width, value.height))
-                rect.fill((50, 50, 50))
+                rect.fill(
+                    self.additions["rect_color"]
+                    if f"{key}_color" not in self.additions
+                    else self.additions[f"{key}_color"]
+                )
                 surface.blit(rect, value)
-                if "button_texts" in self.additions and key in self.additions["button_texts"]:
+                if (
+                    "button_texts" in self.additions
+                    and key in self.additions["button_texts"]
+                ):
                     text = Font.MINECRAFT_FONT["text"].render(
                         self.additions["button_texts"][key], True, (255, 255, 255)
                     )
@@ -235,6 +258,7 @@ class MainMenu(HUD):
 
         self.additions = {
             "background": pygame.image.load("src/assets/img/HUD/backgrounds/stars.png"),
+            "rect_color": (50, 50, 50),
             "title": {
                 "pos": (
                     CENTER_X - self.elements["title"].get_width() // 2,
@@ -282,7 +306,7 @@ class SettingsMenu(HUD, ScrollableHUD):
                 60,
             ),
             "up_btn": pygame.Rect(
-                CENTER_X + 50,  
+                CENTER_X + 50,
                 CENTER_Y - button_spacing * 2 + 20,
                 button_width,
                 button_height,
@@ -369,6 +393,7 @@ class SettingsMenu(HUD, ScrollableHUD):
         }
         self.additions = {
             "background": pygame.image.load("src/assets/img/HUD/backgrounds/stars.png"),
+            "rect_color": (50, 50, 50),
             "title": {
                 "pos": (
                     CENTER_X - self.elements["title"].get_width() // 2,
@@ -482,9 +507,41 @@ class SettingsMenu(HUD, ScrollableHUD):
                 "prev_page": "Назад",
             },
         }
-        
-        self.pages = [["title", "description", "up_btn_label", "break_btn_label", "left_btn_label", "right_btn_label", "boost_btn_label", "next_page", "up_btn", "break_btn", "left_btn", "right_btn", "boost_btn", "back", "version", "developer"], 
-                      ["title", "description", "shield_btn_label", "interaction_btn_label", "prev_page", "shot_btn_label", "shield_btn", "interaction_btn", "shot_btn", "back", "version", "developer"]]
+
+        self.pages = [
+            [
+                "title",
+                "description",
+                "up_btn_label",
+                "break_btn_label",
+                "left_btn_label",
+                "right_btn_label",
+                "boost_btn_label",
+                "next_page",
+                "up_btn",
+                "break_btn",
+                "left_btn",
+                "right_btn",
+                "boost_btn",
+                "back",
+                "version",
+                "developer",
+            ],
+            [
+                "title",
+                "description",
+                "shield_btn_label",
+                "interaction_btn_label",
+                "prev_page",
+                "shot_btn_label",
+                "shield_btn",
+                "interaction_btn",
+                "shot_btn",
+                "back",
+                "version",
+                "developer",
+            ],
+        ]
 
     def render(self, surface, bg_color=(15, 7, 36)):
         self.update_elements()
@@ -496,7 +553,7 @@ class EducationMenu(HUD, ScrollableHUD):
         HUD.__init__(self)
         ScrollableHUD.__init__(self)
         self.has_moving_background = True
-        
+
     def update_elements(self):
         self.elements = {
             "title": Font.MINECRAFT_FONT["title"].render(
@@ -519,12 +576,15 @@ class EducationMenu(HUD, ScrollableHUD):
                 "MogCargo /> - игра про космические перевозки.", True, (255, 255, 255)
             ),
             "target_description_part_2": Font.MINECRAFT_FONT["text"].render(
-                "Ваша цель - доставлять различные грузы на станции.", True, (255, 255, 255)
+                "Ваша цель - доставлять различные грузы на станции.",
+                True,
+                (255, 255, 255),
             ),
             "target_description_part_3": Font.MINECRAFT_FONT["text"].render(
-                "Для этого вам нужно будет управлять своим кораблем.", True, (255, 255, 255)
+                "Для этого вам нужно будет управлять своим кораблем.",
+                True,
+                (255, 255, 255),
             ),
-
             "moving_title": Font.MINECRAFT_FONT["h2"].render(
                 "Движение", True, (255, 255, 255)
             ),
@@ -556,13 +616,16 @@ class EducationMenu(HUD, ScrollableHUD):
                 "Общее использование", True, (255, 255, 255)
             ),
             "desc_common_interaction": Font.MINECRAFT_FONT["text"].render(
-                f"{get_key('interaction')} - взаимодействие с объектами", True, (255, 255, 255)
+                f"{get_key('interaction')} - взаимодействие с объектами",
+                True,
+                (255, 255, 255),
             ),
             "version": version_elem,
             "developer": developer_elem,
         }
         self.additions = {
             "background": pygame.image.load("src/assets/img/HUD/backgrounds/stars.png"),
+            "rect_color": (50, 50, 50),
             "title": {
                 "pos": (
                     CENTER_X - self.elements["title"].get_width() // 2,
@@ -577,19 +640,22 @@ class EducationMenu(HUD, ScrollableHUD):
             },
             "target_description_part_1": {
                 "pos": (
-                    CENTER_X - self.elements["target_description_part_1"].get_width() // 2,
+                    CENTER_X
+                    - self.elements["target_description_part_1"].get_width() // 2,
                     275,
                 )
             },
             "target_description_part_2": {
                 "pos": (
-                    CENTER_X - self.elements["target_description_part_2"].get_width() // 2,
+                    CENTER_X
+                    - self.elements["target_description_part_2"].get_width() // 2,
                     325,
                 )
             },
             "target_description_part_3": {
                 "pos": (
-                    CENTER_X - self.elements["target_description_part_3"].get_width() // 2,
+                    CENTER_X
+                    - self.elements["target_description_part_3"].get_width() // 2,
                     375,
                 )
             },
@@ -655,7 +721,8 @@ class EducationMenu(HUD, ScrollableHUD):
             },
             "desc_common_interaction": {
                 "pos": (
-                    CENTER_X - self.elements["desc_common_interaction"].get_width() // 2,
+                    CENTER_X
+                    - self.elements["desc_common_interaction"].get_width() // 2,
                     425,
                 )
             },
@@ -674,16 +741,143 @@ class EducationMenu(HUD, ScrollableHUD):
                 "prev_page": "Назад",
             },
         }
-        self.pages = [["title", "target_title", "target_description_part_1", "target_description_part_2", 
-                             "target_description_part_3", "moving_title", "desc_moving_up", "desc_moving_break",
-                             "desc_moving_left", "desc_moving_right", "desc_moving_boost", "back", "next_page", "version", "developer"], 
-                      ["title", "special_title", "desc_special_shot", "desc_special_shield",
-                             "common_title", "desc_common_interaction", "back", "prev_page", "version", "developer"]]
-        
+        self.pages = [
+            [
+                "title",
+                "target_title",
+                "target_description_part_1",
+                "target_description_part_2",
+                "target_description_part_3",
+                "moving_title",
+                "desc_moving_up",
+                "desc_moving_break",
+                "desc_moving_left",
+                "desc_moving_right",
+                "desc_moving_boost",
+                "back",
+                "next_page",
+                "version",
+                "developer",
+            ],
+            [
+                "title",
+                "special_title",
+                "desc_special_shot",
+                "desc_special_shield",
+                "common_title",
+                "desc_common_interaction",
+                "back",
+                "prev_page",
+                "version",
+                "developer",
+            ],
+        ]
+
     def render(self, surface, bg_color=(15, 7, 36)):
         self.update_elements()
         ScrollableHUD.render(self, surface, bg_color)
 
 
 class GameMenu(HUD):
-    pass
+    def __init__(self):
+        super().__init__()
+        self.has_moving_background = True
+        self.update_elements()
+
+    def update_elements(self):
+        user_data = Config.user_data
+        current_level = user_data.get("level", "1")
+        credits = user_data.get("credits", 0)
+        exp = user_data.get("exp", 0)
+
+        self.elements = {
+            "title": Font.MINECRAFT_FONT["title"].render("Меню", True, (255, 255, 255)),
+            "version": version_elem,
+            "developer": developer_elem,
+            "back": pygame.Rect(
+                CENTER_X - 200 - 300,
+                CENTER_Y * 1.7,
+                300,
+                60,
+            ),
+            "play": pygame.Rect(
+                CENTER_X + 200,
+                CENTER_Y * 1.7,
+                300,
+                60,
+            ),
+            "border_level_bar": pygame.Rect(CENTER_X - 202, CENTER_Y + 248, 404, 24),
+            "level_bar": pygame.Rect(
+                CENTER_X - 200,
+                CENTER_Y + 250,
+                400 * (user_data.get("level_percent", 0)),
+                20,
+            ),
+            "credits_icon": pygame.transform.scale(
+                pygame.image.load("src/assets/img/HUD/coin.png"), (40, 40)
+            ),
+            "level_icon": pygame.transform.scale(
+                pygame.image.load("src/assets/img/HUD/book.png"), (40, 40)
+            ),
+            "credits_text": Font.MINECRAFT_FONT["text"].render(
+                f"Кредиты: {credits}", True, (255, 255, 255)
+            ),
+            "level_text": Font.MINECRAFT_FONT["text"].render(
+                f"Уровень: {current_level}", True, (255, 255, 255)
+            ),
+            "exp_text": Font.MINECRAFT_FONT["text"].render(
+                f"{exp} / {Config.cfg['levels'][str(int(current_level) + 1)]['exp']}",
+                True,
+                (255, 255, 255),
+            ),
+        }
+        self.additions = {
+            "background": pygame.image.load("src/assets/img/HUD/backgrounds/stars.png"),
+            "rect_color": (50, 50, 50),
+            "title": {
+                "pos": (
+                    CENTER_X - self.elements["title"].get_width() // 2,
+                    CENTER_Y - 300,
+                )
+            },
+            "version": {
+                "pos": (
+                    SCREEN_WIDTH - self.elements["version"].get_width() - 5,
+                    SCREEN_HEIGHT - self.elements["version"].get_height() - 5,
+                )
+            },
+            "developer": {
+                "pos": (5, SCREEN_HEIGHT - self.elements["developer"].get_height() - 5)
+            },
+            "button_texts": {
+                "back": "Главное меню",
+                "play": "Начать игру",
+            },
+            "credits_icon": {
+                "pos": (CENTER_X - 450, CENTER_Y + 170),
+            },
+            "credits_text": {
+                "pos": (
+                    CENTER_X - 450 + self.elements["credits_icon"].get_width() + 10,
+                    CENTER_Y + 180,
+                ),
+            },
+            "level_icon": {
+                "pos": (CENTER_X - 450, CENTER_Y + 240),
+            },
+            "level_text": {
+                "pos": (
+                    CENTER_X - 450 + self.elements["level_icon"].get_width() + 10,
+                    CENTER_Y + 250,
+                ),
+            },
+            "border_level_bar_color": (255, 255, 255),
+            "level_bar_color": (247, 132, 0),
+            "exp_text": {
+                "pos": (CENTER_X - 152 + 400, CENTER_Y + 250),
+            },
+        }
+
+    def render(self, surface, bg_color=(15, 7, 36)):
+        self.update_elements()
+        super().render(surface, bg_color)
