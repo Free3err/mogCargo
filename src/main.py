@@ -2,13 +2,12 @@ import pygame
 import json
 import os
 
-from .scripts.HUD import MainMenu, SettingsMenu, EducationMenu, GameMenu
+from .scripts.HUD import MainMenu, SettingsMenu, EducationMenu, GameMenu, GameHUD
 from .scripts import terminate
 from .cfg import Config
-from .constants import Font
+from .constants import Font, Device
 
-FPS = 144
-
+FPS = Device.SCREEN_REFRESH_RATE
 
 class Game:
     def __init__(self):
@@ -22,11 +21,13 @@ class Game:
             "main": MainMenu(),
             "settings": SettingsMenu(),
             "education": EducationMenu(),
-            "game": GameMenu(),
+            "game_menu": GameMenu(),
+            "game_hud": GameHUD(),
         }
         self.hud = self.huds["main"]
         self.waiting_for_key = False
         self.key_to_set = None
+        self.camera = None
 
     def load_config(self):
         cfg = {}
@@ -111,6 +112,8 @@ class Game:
     def render(self, hud=None):
         if hud is None:
             hud = self.hud
+        self.screen.fill((0, 0, 0))
+            
         hud.render(self.screen)
 
     def run(self):
@@ -137,7 +140,7 @@ class Game:
                         elif self.hud.elements["education"].collidepoint(mouse_pos):
                             self.hud = self.huds["education"]
                         elif self.hud.elements["start_game"].collidepoint(mouse_pos):
-                            self.hud = self.huds["game"]
+                            self.hud = self.huds["game_menu"]
                         elif self.hud.elements["exit"].collidepoint(mouse_pos):
                             terminate()
 
@@ -179,7 +182,8 @@ class Game:
                         if self.hud.elements["back"].collidepoint(mouse_pos):
                             self.hud = self.huds["main"]
                         elif self.hud.elements["play"].collidepoint(mouse_pos):
-                            self.hud = self.huds["game"]
+                            self.hud = self.huds["game_hud"]
+                            self.hud.start_time = pygame.time.get_ticks()
 
             self.render()
             pygame.display.flip()

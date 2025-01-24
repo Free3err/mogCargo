@@ -1,17 +1,14 @@
 import pygame
 import json
+from random import randint
 
-from ctypes import windll
-
-from ..constants import Font, developer_elem, version_elem
+from ..constants import Font, developer_elem, version_elem, Device
 from ..cfg import Config
 
-user32 = windll.user32
-SCREEN_WIDTH = user32.GetSystemMetrics(0)
-SCREEN_HEIGHT = user32.GetSystemMetrics(1)
+from ..scripts.entities import Ship, Asteroid
 
-CENTER_X = SCREEN_WIDTH // 2
-CENTER_Y = SCREEN_HEIGHT // 2
+CENTER_X = Device.SCREEN_WIDTH // 2
+CENTER_Y = Device.SCREEN_HEIGHT // 2
 
 
 def get_key(key):
@@ -92,7 +89,7 @@ class ScrollableHUD:
         surface.blit(
             pygame.transform.scale(
                 self.additions["background"],
-                (SCREEN_WIDTH + 150, SCREEN_HEIGHT + 150),
+                (Device.SCREEN_WIDTH + 150, Device.SCREEN_HEIGHT + 150),
             ),
             (self.bg_offset_x, self.bg_offset_y),
         )
@@ -150,32 +147,32 @@ class HUD:
         """
         surface.fill(bg_color)
 
-        if hasattr(self, "has_moving_background") and self.has_moving_background:
-            current_mouse_pos = pygame.mouse.get_pos()
-            mouse_dx = current_mouse_pos[0] - self.last_mouse_pos[0]
-            mouse_dy = current_mouse_pos[1] - self.last_mouse_pos[1]
+        if hasattr(self, "additions") and "background" in self.additions:
+            if hasattr(self, "has_moving_background") and self.has_moving_background:
+                current_mouse_pos = pygame.mouse.get_pos()
+                mouse_dx = current_mouse_pos[0] - self.last_mouse_pos[0]
+                mouse_dy = current_mouse_pos[1] - self.last_mouse_pos[1]
 
-            self.bg_offset_x = max(-100, min(0, self.bg_offset_x - mouse_dx * 0.1))
-            self.bg_offset_y = max(-100, min(0, self.bg_offset_y - mouse_dy * 0.1))
+                self.bg_offset_x = max(-100, min(0, self.bg_offset_x - mouse_dx * 0.1))
+                self.bg_offset_y = max(-100, min(0, self.bg_offset_y - mouse_dy * 0.1))
 
-            if hasattr(self, "additions") and "background" in self.additions:
                 surface.blit(
                     pygame.transform.scale(
                         self.additions["background"],
-                        (SCREEN_WIDTH + 150, SCREEN_HEIGHT + 150),
+                        (Device.SCREEN_WIDTH + 150, Device.SCREEN_HEIGHT + 150),
                     ),
                     (self.bg_offset_x, self.bg_offset_y),
                 )
 
-            self.last_mouse_pos = current_mouse_pos
-        else:
-            surface.blit(
-                pygame.transform.scale(
-                    self.additions["background"],
-                    (SCREEN_WIDTH + 150, SCREEN_HEIGHT + 150),
-                ),
-                (0, 0),
-            )
+                self.last_mouse_pos = current_mouse_pos
+            else:
+                surface.blit(
+                    pygame.transform.scale(
+                        self.additions["background"],
+                        (Device.SCREEN_WIDTH + 150, Device.SCREEN_HEIGHT + 150),
+                    ),
+                    (0, 0),
+                )
 
         for key, value in self.elements.items():
             if isinstance(value, pygame.Rect):
@@ -267,12 +264,15 @@ class MainMenu(HUD):
             },
             "version": {
                 "pos": (
-                    SCREEN_WIDTH - self.elements["version"].get_width() - 5,
-                    SCREEN_HEIGHT - self.elements["version"].get_height() - 5,
+                    Device.SCREEN_WIDTH - self.elements["version"].get_width() - 5,
+                    Device.SCREEN_HEIGHT - self.elements["version"].get_height() - 5,
                 )
             },
             "developer": {
-                "pos": (5, SCREEN_HEIGHT - self.elements["developer"].get_height() - 5)
+                "pos": (
+                    5,
+                    Device.SCREEN_HEIGHT - self.elements["developer"].get_height() - 5,
+                )
             },
             "button_texts": {
                 "start_game": "Начать игру",
@@ -486,12 +486,15 @@ class SettingsMenu(HUD, ScrollableHUD):
             },
             "version": {
                 "pos": (
-                    SCREEN_WIDTH - self.elements["version"].get_width() - 5,
-                    SCREEN_HEIGHT - self.elements["version"].get_height() - 5,
+                    Device.SCREEN_WIDTH - self.elements["version"].get_width() - 5,
+                    Device.SCREEN_HEIGHT - self.elements["version"].get_height() - 5,
                 )
             },
             "developer": {
-                "pos": (5, SCREEN_HEIGHT - self.elements["developer"].get_height() - 5)
+                "pos": (
+                    5,
+                    Device.SCREEN_HEIGHT - self.elements["developer"].get_height() - 5,
+                )
             },
             "button_texts": {
                 "up_btn": get_key("up"),
@@ -728,12 +731,15 @@ class EducationMenu(HUD, ScrollableHUD):
             },
             "version": {
                 "pos": (
-                    SCREEN_WIDTH - self.elements["version"].get_width() - 5,
-                    SCREEN_HEIGHT - self.elements["version"].get_height() - 5,
+                    Device.SCREEN_WIDTH - self.elements["version"].get_width() - 5,
+                    Device.SCREEN_HEIGHT - self.elements["version"].get_height() - 5,
                 )
             },
             "developer": {
-                "pos": (5, SCREEN_HEIGHT - self.elements["developer"].get_height() - 5)
+                "pos": (
+                    5,
+                    Device.SCREEN_HEIGHT - self.elements["developer"].get_height() - 5,
+                )
             },
             "button_texts": {
                 "back": "Главное меню",
@@ -842,12 +848,15 @@ class GameMenu(HUD):
             },
             "version": {
                 "pos": (
-                    SCREEN_WIDTH - self.elements["version"].get_width() - 5,
-                    SCREEN_HEIGHT - self.elements["version"].get_height() - 5,
+                    Device.SCREEN_WIDTH - self.elements["version"].get_width() - 5,
+                    Device.SCREEN_HEIGHT - self.elements["version"].get_height() - 5,
                 )
             },
             "developer": {
-                "pos": (5, SCREEN_HEIGHT - self.elements["developer"].get_height() - 5)
+                "pos": (
+                    5,
+                    Device.SCREEN_HEIGHT - self.elements["developer"].get_height() - 5,
+                )
             },
             "button_texts": {
                 "back": "Главное меню",
@@ -881,3 +890,95 @@ class GameMenu(HUD):
     def render(self, surface, bg_color=(15, 7, 36)):
         self.update_elements()
         super().render(surface, bg_color)
+
+
+class GameHUD(HUD):
+    def __init__(self):
+        super().__init__()
+        self.loading_hud = LoadingHUD()
+        self.loading = True
+        self.update_elements()
+
+        self.sprites = pygame.sprite.Group()
+        self.sprites.add(Ship((CENTER_X, CENTER_Y)))
+        for i in range(10):
+            self.sprites.add(
+                Asteroid(
+                    (randint(0, Device.SCREEN_WIDTH), randint(0, Device.SCREEN_HEIGHT))
+                )
+            )
+
+    def update_elements(self):
+        user_data = Config.user_data
+        credits = user_data.get("credits", 0)
+
+        self.elements = {
+            "credits_icon": pygame.transform.scale(
+                pygame.image.load("src/assets/img/HUD/coin.png"), (40, 40)
+            ),
+            "credits_text": Font.MINECRAFT_FONT["text"].render(
+                f"Кредиты: {credits}", True, (255, 255, 255)
+            ),
+        }
+
+        self.additions = {
+            "credits_icon": {
+                "pos": (
+                    100 + self.elements["credits_icon"].get_width() // 2,
+                    150 + self.elements["credits_icon"].get_height() // 2,
+                ),
+            },
+            "credits_text": {
+                "pos": (
+                    100 + self.elements["credits_icon"].get_width() + 10,
+                    150,
+                ),
+            },
+        }
+
+    def render(self, surface, bg_color=(0, 0, 0)):
+        current_time = pygame.time.get_ticks()
+        if current_time - self.start_time < 2000:
+            surface.fill(bg_color)
+            self.loading_hud.render(surface)
+        else:
+            if self.loading:
+                self.loading = False
+            self.sprites.update()
+            self.sprites.draw(surface)
+
+
+class LoadingHUD(HUD):
+    def __init__(self):
+        super().__init__()
+        self.texts = [
+            Font.MINECRAFT_FONT["h2"].render("Загрузка.", True, (255, 255, 255)),
+            Font.MINECRAFT_FONT["h2"].render("Загрузка..", True, (255, 255, 255)),
+            Font.MINECRAFT_FONT["h2"].render("Загрузка...", True, (255, 255, 255)),
+        ]
+        self.current_text = 0
+        self.update_elements()
+
+    def update_elements(self):
+        self.elements = {"loading_text": self.texts[self.current_text]}
+
+        self.additions = {
+            "loading_text": {
+                "pos": (
+                    CENTER_X - self.elements["loading_text"].get_width() // 2,
+                    CENTER_Y - self.elements["loading_text"].get_height() // 2,
+                ),
+            },
+        }
+
+    def render(self, surface, bg_color=(0, 0, 0)):
+        surface.fill(bg_color)
+
+        loading_text = self.elements["loading_text"]
+        loading_pos = self.additions["loading_text"]["pos"]
+        surface.blit(loading_text, loading_pos)
+
+        self.current_text += 1
+        self.current_text %= 3
+        pygame.time.delay(300)
+        self.update_elements()
