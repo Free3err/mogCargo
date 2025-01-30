@@ -907,6 +907,24 @@ class GameHUD(HUD):
                     (randint(0, Device.SCREEN_WIDTH), randint(0, Device.SCREEN_HEIGHT))
                 )
             )
+            
+    def render_minimap(self, surface):
+        minimap_width = Device.SCREEN_WIDTH // 5
+        minimap_height = Device.SCREEN_HEIGHT // 5
+        minimap_surface = pygame.Surface((minimap_width, minimap_height))
+        minimap_surface.fill((0, 0, 0))
+        border = pygame.Rect(0, 0, minimap_width, minimap_height)
+
+        for sprite in self.sprites:
+            if isinstance(sprite, Asteroid):
+                pygame.draw.circle(minimap_surface, (128, 128, 128), (sprite.rect.x // 5, sprite.rect.y // 5), 3)
+        
+        ship_pos = self.sprites.sprites()[0].rect
+        pygame.draw.circle(minimap_surface, (255, 255, 0), (ship_pos.x // 5, ship_pos.y // 5), 5)
+        pygame.draw.rect(minimap_surface, (255, 255, 255), border, 2)
+        
+        surface.blit(minimap_surface, (25, 25))
+        
 
     def update_elements(self):
         user_data = Config.user_data
@@ -946,6 +964,7 @@ class GameHUD(HUD):
                 self.loading = False
             self.sprites.update()
             self.sprites.draw(surface)
+            self.render_minimap(surface)
 
 
 class LoadingHUD(HUD):

@@ -1,6 +1,8 @@
 from random import randint, uniform
 import pygame
 
+from ...constants import Device
+
 class Asteroid(pygame.sprite.Sprite):
     img = pygame.image.load("src/assets/img/entities/asteroid.png")
     
@@ -21,3 +23,6 @@ class Asteroid(pygame.sprite.Sprite):
         self.y += self.speed_y
         self.rect.x = self.x
         self.rect.y = self.y
+
+        if self.rect.x < -self.rect.width or self.rect.x > Device.SCREEN_WIDTH or self.rect.y < -self.rect.height or self.rect.y > Device.SCREEN_HEIGHT:
+            self.kill()
