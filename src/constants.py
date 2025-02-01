@@ -36,4 +36,4 @@ class Device:
 developer_elem = Font.MINECRAFT_FONT["small"].render(
     "© free3err. GNU GPL v3.0 License", True, (255, 255, 255)
 )
-version_elem = Font.MINECRAFT_FONT["small"].render("v0.3.2", True, (255, 255, 255))
+version_elem = Font.MINECRAFT_FONT["small"].render("v0.5.0", True, (255, 255, 255))

@@ -9,6 +9,7 @@ from .constants import Font, Device
 
 FPS = Device.SCREEN_REFRESH_RATE
 
+
 class Game:
     def __init__(self):
         pygame.init()
@@ -46,6 +47,7 @@ class Game:
                 json.dump(self.cfg["keymapping"], f, indent=4)
             self.waiting_for_key = False
             self.key_to_set = None
+            Config.__init__(Config())
 
     def start_screen(self):
         start_surface = pygame.Surface(
@@ -113,7 +115,7 @@ class Game:
         if hud is None:
             hud = self.hud
         self.screen.fill((0, 0, 0))
-            
+
         hud.render(self.screen)
 
     def run(self):
@@ -182,8 +184,28 @@ class Game:
                         if self.hud.elements["back"].collidepoint(mouse_pos):
                             self.hud = self.huds["main"]
                         elif self.hud.elements["play"].collidepoint(mouse_pos):
+                            self.huds["game_hud"] = GameHUD()
                             self.hud = self.huds["game_hud"]
                             self.hud.start_time = pygame.time.get_ticks()
+
+
+
+                    elif isinstance(self.hud, GameHUD):
+                        if self.hud.pause:
+                            if self.hud.elements["продолжить"].collidepoint(mouse_pos):
+                                self.hud.pause = False
+                            elif self.hud.elements["выйти"].collidepoint(mouse_pos):
+                                self.hud = self.huds["main"]
+
+                        elif self.hud.elements["back"].collidepoint(mouse_pos):
+                            self.hud = self.huds["main"]
+
+                if (
+                    isinstance(self.hud, GameHUD)
+                    and event.type == pygame.KEYDOWN
+                    and event.key == pygame.K_ESCAPE
+                ):
+                    self.hud.pause = not self.hud.pause
 
             self.render()
             pygame.display.flip()

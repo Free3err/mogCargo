@@ -1,11 +1,13 @@
 import pygame
 import json
 from random import randint
+import pymunk
 
 from ..constants import Font, developer_elem, version_elem, Device
 from ..cfg import Config
 
 from ..scripts.entities import Ship, Asteroid
+from ..scripts.camera import Camera
 
 CENTER_X = Device.SCREEN_WIDTH // 2
 CENTER_Y = Device.SCREEN_HEIGHT // 2
@@ -57,6 +59,7 @@ def get_user_data(key):
 
 class ScrollableHUD:
     def __init__(self):
+        """Инициализация прокручиваемого интерфейса"""
         super().__init__()
         self.current_page = 1
         self.max_pages = 2
@@ -77,6 +80,7 @@ class ScrollableHUD:
         }
 
     def render(self, surface, bg_color=(15, 7, 36)):
+        """Отрисовка прокручиваемого интерфейса"""
         surface.fill(bg_color)
 
         current_mouse_pos = pygame.mouse.get_pos()
@@ -129,9 +133,7 @@ class ScrollableHUD:
 
 class HUD:
     def __init__(self):
-        """
-        Инициализация HUD
-        """
+        """Инициализация базового интерфейса"""
         self.elements = None
         self.cursor = pygame.image.load("src/assets/img/HUD/cursor.png")
         self.cursor = pygame.transform.scale(self.cursor, (24, 34))
@@ -140,11 +142,14 @@ class HUD:
         self.bg_offset_x = 0
         self.bg_offset_y = 0
         self.last_mouse_pos = pygame.mouse.get_pos()
+        
+    def render_cursor(self, surface):
+        """Отрисовка курсора на поверхности"""
+        mouse_pos = pygame.mouse.get_pos()
+        surface.blit(self.cursor, (mouse_pos[0], mouse_pos[1]))
 
     def render(self, surface, bg_color=(15, 7, 36)):
-        """
-        Отрисовка HUD
-        """
+        """Отрисовка базового интерфейса"""
         surface.fill(bg_color)
 
         if hasattr(self, "additions") and "background" in self.additions:
@@ -200,8 +205,7 @@ class HUD:
                 ):
                     surface.blit(value, self.additions[key]["pos"])
 
-        mouse_pos = pygame.mouse.get_pos()
-        surface.blit(self.cursor, (mouse_pos[0], mouse_pos[1]))
+        self.render_cursor(surface)
 
 
 class MainMenu(HUD):
@@ -897,74 +901,112 @@ class GameHUD(HUD):
         super().__init__()
         self.loading_hud = LoadingHUD()
         self.loading = True
-        self.update_elements()
-
+        self.pause = False
+        self.elements = {}
+        
+        # Создаем физическое пространство
+        self.space = pymunk.Space()
+        self.space.damping = 0.8
+        
+        self.camera = Camera(Device.SCREEN_WIDTH, Device.SCREEN_HEIGHT)
         self.sprites = pygame.sprite.Group()
-        self.sprites.add(Ship((CENTER_X, CENTER_Y)))
-        for i in range(10):
-            self.sprites.add(
-                Asteroid(
-                    (randint(0, Device.SCREEN_WIDTH), randint(0, Device.SCREEN_HEIGHT))
-                )
+    
+        self.ship = Ship((randint(0, Device.SCREEN_WIDTH * 3), randint(0, Device.SCREEN_HEIGHT * 4)), self.space)
+        self.sprites.add(self.ship)
+        
+        for i in range(randint(100, 150)):
+            asteroid = Asteroid(
+                (randint(0, Device.SCREEN_WIDTH * 3), 
+                 randint(0, Device.SCREEN_HEIGHT * 4)),
+                self.space
             )
-            
-    def render_minimap(self, surface):
-        minimap_width = Device.SCREEN_WIDTH // 5
-        minimap_height = Device.SCREEN_HEIGHT // 5
-        minimap_surface = pygame.Surface((minimap_width, minimap_height))
-        minimap_surface.fill((0, 0, 0))
-        border = pygame.Rect(0, 0, minimap_width, minimap_height)
-
-        for sprite in self.sprites:
-            if isinstance(sprite, Asteroid):
-                pygame.draw.circle(minimap_surface, (128, 128, 128), (sprite.rect.x // 5, sprite.rect.y // 5), 3)
-        
-        ship_pos = self.sprites.sprites()[0].rect
-        pygame.draw.circle(minimap_surface, (255, 255, 0), (ship_pos.x // 5, ship_pos.y // 5), 5)
-        pygame.draw.rect(minimap_surface, (255, 255, 255), border, 2)
-        
-        surface.blit(minimap_surface, (25, 25))
-        
-
-    def update_elements(self):
-        user_data = Config.user_data
-        credits = user_data.get("credits", 0)
-
-        self.elements = {
-            "credits_icon": pygame.transform.scale(
-                pygame.image.load("src/assets/img/HUD/coin.png"), (40, 40)
-            ),
-            "credits_text": Font.MINECRAFT_FONT["text"].render(
-                f"Кредиты: {credits}", True, (255, 255, 255)
-            ),
-        }
-
-        self.additions = {
-            "credits_icon": {
-                "pos": (
-                    100 + self.elements["credits_icon"].get_width() // 2,
-                    150 + self.elements["credits_icon"].get_height() // 2,
-                ),
-            },
-            "credits_text": {
-                "pos": (
-                    100 + self.elements["credits_icon"].get_width() + 10,
-                    150,
-                ),
-            },
-        }
-
+            self.sprites.add(asteroid)
+    
     def render(self, surface, bg_color=(0, 0, 0)):
         current_time = pygame.time.get_ticks()
         if current_time - self.start_time < 2000:
             surface.fill(bg_color)
             self.loading_hud.render(surface)
         else:
-            if self.loading:
-                self.loading = False
-            self.sprites.update()
-            self.sprites.draw(surface)
-            self.render_minimap(surface)
+            self.loading = False
+            if not self.pause:
+                surface.fill(bg_color)
+                self.space.step(1/60.0)
+                
+                self.sprites.update()
+                self.camera.update(self.ship)
+                
+                for sprite in self.sprites:
+                    surface.blit(sprite.image, self.camera.apply(sprite))
+                
+                self.render_minimap(surface)
+            else:
+                self.render_pause_menu(surface)
+
+    def render_pause_menu(self, surface):
+        overlay = pygame.Surface((Device.SCREEN_WIDTH, Device.SCREEN_HEIGHT))
+        overlay.fill((0, 0, 0))
+        overlay.set_alpha(128)
+        surface.blit(overlay, (0, 0))
+
+        pause_text = Font.MINECRAFT_FONT["h2"].render("Игра приостановлена", True, (255, 255, 255))
+        text_rect = pause_text.get_rect(center=(Device.SCREEN_WIDTH // 2, Device.SCREEN_HEIGHT // 4))
+        surface.blit(pause_text, text_rect)
+
+        button_width = 200
+        button_height = 50
+        button_spacing = 20
+        button_y = Device.SCREEN_HEIGHT // 2 - button_height
+
+        buttons = ["Продолжить", "Выйти"]
+        
+        for i, text in enumerate(buttons):
+            button_rect = pygame.Rect(
+                Device.SCREEN_WIDTH // 2 - button_width // 2,
+                button_y + (button_height + button_spacing) * i,
+                button_width,
+                button_height
+            )
+            pygame.draw.rect(surface, (50, 50, 50), button_rect)
+            
+            button_text = Font.MINECRAFT_FONT["text"].render(text, True, (255, 255, 255))
+            text_rect = button_text.get_rect(center=button_rect.center)
+            surface.blit(button_text, text_rect)
+            
+            self.elements[text.lower()] = button_rect
+        
+        self.render_cursor(surface)
+
+    def render_minimap(self, surface):
+        minimap_width = Device.SCREEN_WIDTH // 5
+        minimap_height = Device.SCREEN_HEIGHT // 4
+        minimap_surface = pygame.Surface((minimap_width, minimap_height))
+        minimap_surface.fill((0, 0, 0))
+        border = pygame.Rect(0, 0, minimap_width, minimap_height)
+        
+        scale_x = minimap_width / (Device.SCREEN_WIDTH * 3)
+        scale_y = minimap_height / (Device.SCREEN_HEIGHT * 4)
+
+
+        for sprite in self.sprites:
+            if isinstance(sprite, Asteroid):
+                pygame.draw.circle(
+                    minimap_surface, 
+                    (128, 128, 128), 
+                    (int(sprite.rect.x * scale_x), int(sprite.rect.y * scale_y)), 
+                    2
+                )
+        
+        ship_pos = self.ship.rect
+        pygame.draw.circle(
+            minimap_surface, 
+            (255, 255, 0), 
+            (int(ship_pos.x * scale_x), int(ship_pos.y * scale_y)), 
+            3
+        )
+        
+        pygame.draw.rect(minimap_surface, (255, 255, 255), border, 2)
+        surface.blit(minimap_surface, (25, 25))
 
 
 class LoadingHUD(HUD):
