@@ -39,7 +39,6 @@ class Shield:
     BORDER_COLOR = (0, 0, 255)
 
 
-
 developer_elem = Font.MINECRAFT_FONT["small"].render(
     "© free3err. GNU GPL v3.0 License", True, (255, 255, 255)
 )
