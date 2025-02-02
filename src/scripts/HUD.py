@@ -6,7 +6,7 @@ import pymunk
 from ..constants import Font, developer_elem, version_elem, Device
 from ..cfg import Config
 
-from ..scripts.entities import Ship, Asteroid
+from ..scripts.entities import Ship, Asteroid, Planet
 from ..scripts.camera import Camera
 
 CENTER_X = Device.SCREEN_WIDTH // 2
@@ -216,10 +216,6 @@ class MainMenu(HUD):
         super().__init__()
 
         self.has_moving_background = True
-
-        pygame.mixer.init()
-        self.background_music = pygame.mixer.Sound("src/assets/audio/menu_music.mp3")
-        self.background_music.play(loops=-1)
 
         button_width = 300
         button_height = 60
@@ -904,24 +900,41 @@ class GameHUD(HUD):
         self.pause = False
         self.elements = {}
         
-        # Создаем физическое пространство
         self.space = pymunk.Space()
         self.space.damping = 0.8
         
         self.camera = Camera(Device.SCREEN_WIDTH, Device.SCREEN_HEIGHT)
         self.sprites = pygame.sprite.Group()
     
-        self.ship = Ship((randint(0, Device.SCREEN_WIDTH * 3), randint(0, Device.SCREEN_HEIGHT * 4)), self.space)
+        self.ship = Ship((randint(200, Device.SCREEN_WIDTH * 3 - 200), 
+                         randint(200, Device.SCREEN_HEIGHT * 3 - 200)), 
+                        self.space)
         self.sprites.add(self.ship)
         
-        for i in range(randint(100, 150)):
-            asteroid = Asteroid(
-                (randint(0, Device.SCREEN_WIDTH * 3), 
-                 randint(0, Device.SCREEN_HEIGHT * 4)),
-                self.space
-            )
-            self.sprites.add(asteroid)
-    
+        attempts = 0
+        asteroids_count = randint(100, 150)
+        spawned_asteroids = 0
+        
+        for i in range(2):
+            planet = Planet((randint(0, Device.SCREEN_WIDTH * 3), 
+                            randint(0, Device.SCREEN_HEIGHT * 3)), 
+                            self.space, "start" if i % 2 == 0 else "end")
+            self.sprites.add(planet)
+            
+        while spawned_asteroids < asteroids_count and attempts < 1000:
+            pos = (randint(0, Device.SCREEN_WIDTH * 3), 
+                  randint(0, Device.SCREEN_HEIGHT * 3))
+
+            
+            distance = ((pos[0] - self.ship.rect.centerx) ** 2 + 
+                       (pos[1] - self.ship.rect.centery) ** 2) ** 0.5
+            if distance >= 250:
+                asteroid = Asteroid(pos, self.space)
+                self.sprites.add(asteroid)
+                spawned_asteroids += 1
+            
+            attempts += 1
+
     def render(self, surface, bg_color=(0, 0, 0)):
         current_time = pygame.time.get_ticks()
         if current_time - self.start_time < 2000:
@@ -930,18 +943,47 @@ class GameHUD(HUD):
         else:
             self.loading = False
             if not self.pause:
-                surface.fill(bg_color)
-                self.space.step(1/60.0)
-                
-                self.sprites.update()
-                self.camera.update(self.ship)
-                
-                for sprite in self.sprites:
-                    surface.blit(sprite.image, self.camera.apply(sprite))
-                
-                self.render_minimap(surface)
+                if self.ship.hp <= 0:
+                    for sprite in self.sprites:
+                        sprite.kill()
+                    self.render_game_over(surface)
+                elif self.ship.delivered:
+                    self.render_game_won(surface)
+                else:
+                    surface.fill(bg_color)
+                    self.space.step(1/60.0)
+
+                    self.sprites.update()
+                    self.camera.update(self.ship)
+
+                    for sprite in self.sprites:
+                        surface.blit(sprite.image, self.camera.apply(sprite))
+
+                    self.render_minimap(surface)
+                    minimap_width = Device.SCREEN_WIDTH // 6
+                    
+                    # HP Bar
+                    pygame.draw.rect(surface, (255, 255, 255), (minimap_width + 50, 25, 304, 34))
+                    pygame.draw.rect(surface, (255, 0, 0), 
+                                  (minimap_width + 52, 27, 300 * max(0, self.ship.hp / Config.user_data["hp"]), 30))
+                    surface.blit(Font.MINECRAFT_FONT["text"].render(f"HP: {self.ship.hp}", True, (255, 255, 255)), 
+                               (minimap_width + 370, 30))
+                    
+                    # Boost Bar                
+                    pygame.draw.rect(surface, (255, 255, 255), (minimap_width + 50, 65, 304, 34))
+                    pygame.draw.rect(surface, (0, 191, 255), 
+                                  (minimap_width + 52, 67, 300 * self.ship.boost_cooldown_progress, 30))
+                    surface.blit(Font.MINECRAFT_FONT["text"].render(f"Boost: {int(self.ship.boost_cooldown_progress * 100)}%", True, (255, 255, 255)), 
+                               (minimap_width + 370, 70))
+
             else:
                 self.render_pause_menu(surface)
+
+    def render_game_over(self, surface):
+        pass
+
+    def render_game_won(self, surface):
+        pass
 
     def render_pause_menu(self, surface):
         overlay = pygame.Surface((Device.SCREEN_WIDTH, Device.SCREEN_HEIGHT))
@@ -978,35 +1020,70 @@ class GameHUD(HUD):
         self.render_cursor(surface)
 
     def render_minimap(self, surface):
-        minimap_width = Device.SCREEN_WIDTH // 5
-        minimap_height = Device.SCREEN_HEIGHT // 4
+        minimap_width = Device.SCREEN_WIDTH // 6
+        minimap_height = Device.SCREEN_HEIGHT // 6
         minimap_surface = pygame.Surface((minimap_width, minimap_height))
         minimap_surface.fill((0, 0, 0))
         border = pygame.Rect(0, 0, minimap_width, minimap_height)
         
+
         scale_x = minimap_width / (Device.SCREEN_WIDTH * 3)
-        scale_y = minimap_height / (Device.SCREEN_HEIGHT * 4)
+        scale_y = minimap_height / (Device.SCREEN_HEIGHT * 3)
 
-
+        # Отрисовка спрайтов
         for sprite in self.sprites:
+            pos_x = int(sprite.body.position.x * scale_x)
+            pos_y = int(sprite.body.position.y * scale_y)
             if isinstance(sprite, Asteroid):
-                pygame.draw.circle(
-                    minimap_surface, 
-                    (128, 128, 128), 
-                    (int(sprite.rect.x * scale_x), int(sprite.rect.y * scale_y)), 
-                    2
-                )
+                if 0 <= pos_x <= minimap_width and 0 <= pos_y <= minimap_height:
+                    pygame.draw.circle(
+                        minimap_surface, 
+                        (128, 128, 128), 
+                        (pos_x, pos_y), 
+                        2
+                    )
+            elif isinstance(sprite, Planet):
+                if 0 <= pos_x <= minimap_width and 0 <= pos_y <= minimap_height:
+                    match sprite.type:
+                        case "start":
+                            pygame.draw.circle(
+                                minimap_surface,
+                                (242, 68, 56),
+                                (pos_x, pos_y),
+                                3
+                        )
+                        case "end":
+                            pygame.draw.circle(
+                                minimap_surface,
+                                (56, 242, 124),
+                                (pos_x, pos_y),
+                                3
+                            )
+
+        # Отрисовка корабля
+        ship_x = int(self.ship.body.position.x * scale_x)
+        ship_y = int(self.ship.body.position.y * scale_y)
+
+        if 0 <= ship_x <= minimap_width and 0 <= ship_y <= minimap_height:
+            pygame.draw.circle(
+                minimap_surface,
+                (255, 255, 0),
+                (ship_x, ship_y),
+                3
+            )
         
-        ship_pos = self.ship.rect
-        pygame.draw.circle(
-            minimap_surface, 
-            (255, 255, 0), 
-            (int(ship_pos.x * scale_x), int(ship_pos.y * scale_y)), 
-            3
-        )
-        
+        # Отрисовка границы и вывод на экран
         pygame.draw.rect(minimap_surface, (255, 255, 255), border, 2)
         surface.blit(minimap_surface, (25, 25))
+
+    def handle_collision(self, arbiter, space, data):
+        if not self.ship.shield_active:
+            ship = arbiter.shapes[0].body.sprite
+            asteroid = arbiter.shapes[1].body.sprite
+            
+            if pygame.sprite.collide_mask(ship, asteroid):
+                return True
+        return False
 
 
 class LoadingHUD(HUD):

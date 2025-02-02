@@ -3,60 +3,76 @@ import math
 import pymunk
 import time
 
-from ...constants import Device
+from ...constants import Device, Shield
 from ...cfg.config import Config
 
 
 class Ship(pygame.sprite.Sprite):
-    img = pygame.image.load("src/assets/img/entities/ship/based/1.png")
+    imgs = [
+        pygame.image.load("src/assets/img/entities/ship/based/1.png"),
+        pygame.image.load("src/assets/img/entities/ship/based/2.png"),
+        pygame.image.load("src/assets/img/entities/ship/based/3.png"),
+        pygame.image.load("src/assets/img/entities/ship/based/4.png")
+    ]
 
     def __init__(self, pos, space, *groups):
         super().__init__(*groups)
         self.space = space
-        
+
         # Настройка физического тела
         self.body = pymunk.Body(1, pymunk.moment_for_box(1, (100, 100)))
         self.body.position = pos
-        
+
         # Настройка формы для коллизий
         self.shape = pymunk.Poly.create_box(self.body, (100, 100))
-        self.shape.elasticity = 0.8
+        self.shape.elasticity = 0.5
         self.shape.friction = 0.5
         self.shape.collision_type = 1
         self.space.add(self.body, self.shape)
-        
-        # Загрузка анимаций
-        self.frames = {
-            "idle": [
-                pygame.image.load("src/assets/img/entities/ship/engines/idle.png").subsurface((i * 6, 0, 6, 6))
-                for i in range(3)
-            ],
-            "engine": [
-                pygame.image.load("src/assets/img/entities/ship/engines/powering.png").subsurface((i * 6, 0, 6, 6))
-                for i in range(4)
-            ]
-        }
-        
+
+        # Обработчик коллизий
+        handler = space.add_collision_handler(1, 2)
+        handler.separate = self.handle_collision
+
         # Настройка спрайта
-        self.image = pygame.transform.scale(Ship.img, (100, 100))
+        self.image = pygame.transform.scale(Ship.imgs[0], (100, 100))
         self.rect = self.image.get_rect(center=pos)
-        self.engine_img = pygame.transform.scale(self.frames["idle"][0], (100, 100))
-        self.current_frame = 0
+        self.angle = 0
 
         # Параметры движения
-        self.acceleration = 30
-        self.max_speed = 10
+        self.acceleration = 60
+        self.max_speed = Config.user_data["max_speed"]
         self.friction = 0.7
-        self.angle = 0
-        
+
         # Параметры ускорения
         self.boost_active = False
+        self.boost_available = True
         self.boost_start_time = 0
         self.boost_cooldown_start = 0
+        self.boost_cooldown_progress = 1.0
+
+        # Параметры щита
+        self.shield_active = False
+        self.shield_available = True
+        self.shield_start_time = 0
+        self.shield_cooldown_start = 0
+        self.elapsed_shield_time = 10
+
+        # Другое
+        self.hp = Config.user_data["hp"]
+        self.delivered = False
 
         # Границы мира
         self.world_width = Device.SCREEN_WIDTH * 3
         self.world_height = Device.SCREEN_HEIGHT * 4
+
+        # Другое
+        self.shield_surface = pygame.Surface((140, 140), pygame.SRCALPHA)
+
+    def handle_collision(self, arbiter, space, data):
+        if not self.shield_active:
+            self.hp -= 1
+        return True
 
     def update(self):
         # Обновляем позицию спрайта
@@ -64,26 +80,45 @@ class Ship(pygame.sprite.Sprite):
 
         keys = pygame.key.get_pressed()
         current_time = time.time()
-        
+
         # Управление поворотом
         if keys[Config.cfg["keymapping"]["left"]]:
-            self.angle += 1
+            self.angle += 2
         if keys[Config.cfg["keymapping"]["right"]]:
-            self.angle -= 1
-            
+            self.angle -= 2
+
         # Управление ускорением
-        if keys[Config.cfg["keymapping"]["boost"]] and not self.boost_active:
-            if current_time - self.boost_cooldown_start >= Config.user_data["boost_cooldown"]:
-                self.boost_active = True
-                self.boost_start_time = current_time
-                
+        if (
+                keys[Config.cfg["keymapping"]["boost"]]
+                and self.boost_available
+                and not self.boost_active
+        ):
+            self.boost_active = True
+            self.boost_available = False
+            self.boost_start_time = current_time
+
         if self.boost_active:
-            if current_time - self.boost_start_time >= Config.user_data["boost_time"]:
+            elapsed_time = current_time - self.boost_start_time
+            self.boost_cooldown_progress = max(
+                0.0, 1.0 - (elapsed_time / Config.user_data["boost_time"])
+            )
+            if elapsed_time >= Config.user_data["boost_time"]:
                 self.boost_active = False
                 self.boost_cooldown_start = current_time
-                
-        boost_multiplier = 1.5 if self.boost_active else 1
-            
+                self.boost_cooldown_progress = 0.0
+
+        if not self.boost_available and not self.boost_active:
+            elapsed_cooldown = current_time - self.boost_cooldown_start
+            self.boost_cooldown_progress = min(
+                1.0, elapsed_cooldown / Config.user_data["boost_cooldown"]
+            )
+            if self.boost_cooldown_progress >= 1.0:
+                self.boost_available = True
+
+        boost_multiplier = (
+            Config.user_data["boost_multiplier"] if self.boost_active else 1
+        )
+
         # Движение вперед
         if keys[Config.cfg["keymapping"]["up"]]:
             angle_rad = math.radians(self.angle)
@@ -93,18 +128,52 @@ class Ship(pygame.sprite.Sprite):
                     -math.cos(angle_rad) * self.acceleration * boost_multiplier,
                 )
             )
-            
+
         # Торможение
         if keys[Config.cfg["keymapping"]["break"]]:
             self.body.velocity *= 0.99
 
-        # Обновление анимации и спрайта
-        self.update_animation()
-        self.image.blit(self.engine_img, (0, 0))
-        self.image = pygame.transform.rotate(
-            pygame.transform.scale(Ship.img, (100, 100)), 
-            self.angle
-        )
+        # Щит
+        if keys[Config.cfg["keymapping"]["shield"]]:
+            if self.shield_available and not self.shield_active:
+                self.shield_active = True
+                self.shield_available = False
+                self.shield_start_time = current_time
+
+        if self.shield_active:
+            self.shield_surface.fill((0, 0, 0, 0))
+            pygame.draw.circle(
+                self.shield_surface,
+                Shield.COLOR,
+                (
+                    self.rect.x,
+                    self.rect.y,
+                ),
+                Shield.RADIUS,
+            )
+            pygame.draw.circle(
+                self.shield_surface,
+                Shield.BORDER_COLOR,
+                (
+                    self.rect.x,
+                    self.rect.y,
+                ),
+                Shield.RADIUS,
+                2,
+            )
+            elapsed_time = current_time - self.shield_start_time
+            if elapsed_time >= Config.user_data["shield_time"]:
+                self.shield_active = False
+                self.shield_cooldown_start = current_time
+
+        if not self.shield_available and not self.shield_active:
+            elapsed_time = current_time - self.shield_cooldown_start
+            if elapsed_time >= Config.user_data["shield_cooldown"]:
+                self.shield_available = True
+
+        # Обновление спрайта
+        sprite_index = min(max(0, 4 - self.hp), 3)
+        self.image = pygame.transform.rotate(pygame.transform.scale(Ship.imgs[sprite_index], (100, 100)), self.angle)
         self.rect = self.image.get_rect(center=self.body.position)
 
         # Проверка границ карты
@@ -112,37 +181,14 @@ class Ship(pygame.sprite.Sprite):
             self.body.position = pymunk.Vec2d(self.rect.width / 2, self.body.position.y)
         elif self.rect.right > self.world_width:
             self.body.position = pymunk.Vec2d(
-                self.world_width - self.rect.width / 2, 
-                self.body.position.y
+                self.world_width - self.rect.width / 2, self.body.position.y
             )
 
         if self.rect.top < 0:
             self.body.position = pymunk.Vec2d(
-                self.body.position.x, 
-                self.rect.height / 2
+                self.body.position.x, Device.SCREEN_HEIGHT * 3 - self.rect.height / 2
             )
-        elif self.rect.bottom > self.world_height:
+        elif self.rect.bottom > Device.SCREEN_HEIGHT * 3:
             self.body.position = pymunk.Vec2d(
-                self.body.position.x,
-                self.world_height - self.rect.height / 2
+                self.body.position.x, self.rect.height / 2
             )
-            
-    def update_animation(self):
-        if pygame.time.get_ticks() % 20 == 0:
-            keys = pygame.key.get_pressed()
-            
-            # Анимация двигателя при движении вперед
-            if keys[Config.cfg["keymapping"]["up"]] and not keys[Config.cfg["keymapping"]["break"]]:
-                self.current_frame = (self.current_frame + 1) % 4
-                self.engine_img = pygame.transform.scale(
-                    self.frames["engine"][self.current_frame], 
-                    (100, 100)
-                )
-            
-            # Анимация при AFK
-            else:
-                self.current_frame = (self.current_frame + 1) % 3
-                self.engine_img = pygame.transform.scale(
-                    self.frames["idle"][self.current_frame], 
-                    (100, 100)
-                )

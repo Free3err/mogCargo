@@ -1,11 +1,12 @@
 import pygame
+import random
 import json
 import os
 
 from .scripts.HUD import MainMenu, SettingsMenu, EducationMenu, GameMenu, GameHUD
 from .scripts import terminate
 from .cfg import Config
-from .constants import Font, Device
+from .constants import Font, Device, game_music_themes
 
 FPS = Device.SCREEN_REFRESH_RATE
 
@@ -13,6 +14,7 @@ FPS = Device.SCREEN_REFRESH_RATE
 class Game:
     def __init__(self):
         pygame.init()
+        pygame.mixer.init()
         self.cfg = Config().cfg
         self.screen = pygame.display.set_mode()
         pygame.display.set_caption("MogCargo />")
@@ -29,6 +31,9 @@ class Game:
         self.waiting_for_key = False
         self.key_to_set = None
         self.camera = None
+        
+        self.music = pygame.mixer.Sound("src/assets/audio/menu_music.mp3")
+        self.music.play(-1)
 
     def load_config(self):
         cfg = {}
@@ -48,6 +53,18 @@ class Game:
             self.waiting_for_key = False
             self.key_to_set = None
             Config.__init__(Config())
+
+    def play_sfx(self):
+        if hasattr(self, 'music'):
+            self.music.stop()
+            
+        match self.hud:
+            case MainMenu():
+                self.music = pygame.mixer.Sound("src/assets/audio/menu_music.mp3")
+                self.music.play(-1)
+            case GameHUD():
+                self.music = pygame.mixer.Sound(random.choice(game_music_themes))
+                self.music.play(-1)
 
     def start_screen(self):
         start_surface = pygame.Surface(
@@ -128,7 +145,7 @@ class Game:
                 if event.type == pygame.QUIT:
                     running = False
                     break
-
+                
                 if self.waiting_for_key:
                     self.handle_key_setting(event)
                     continue
@@ -187,8 +204,7 @@ class Game:
                             self.huds["game_hud"] = GameHUD()
                             self.hud = self.huds["game_hud"]
                             self.hud.start_time = pygame.time.get_ticks()
-
-
+                            self.play_sfx()
 
                     elif isinstance(self.hud, GameHUD):
                         if self.hud.pause:
@@ -196,9 +212,7 @@ class Game:
                                 self.hud.pause = False
                             elif self.hud.elements["выйти"].collidepoint(mouse_pos):
                                 self.hud = self.huds["main"]
-
-                        elif self.hud.elements["back"].collidepoint(mouse_pos):
-                            self.hud = self.huds["main"]
+                                self.play_sfx()
 
                 if (
                     isinstance(self.hud, GameHUD)
