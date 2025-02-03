@@ -2,11 +2,16 @@
 __pycache__/
 *.py[cod]
 *$py.class
+*.pyc
+*.pyo
+*.pyd
 
 # Дистрибутивы и сборки
 dist/
 build/
 *.egg-info/
+
+
 
 # Виртуальное окружение
 venv/

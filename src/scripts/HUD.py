@@ -1033,20 +1033,16 @@ class GameMenu(HUD):
 
         match upgrade_type:
             case "hp":
-                current_value = user_data["hp"]
                 current_level = Config.cfg["prices"]["hp"]["current_level"]
                 price = prices["hp"]["base_price"]
             case "speed":
-                current_value = user_data["max_speed"]
                 current_level = Config.cfg["prices"]["speed"]["current_level"]
                 price = prices["speed"]["base_price"]
 
             case "boost":
-                current_value = user_data["boost_time"]
                 current_level = Config.cfg["prices"]["boost"]["current_level"]
                 price = prices["boost"]["base_price"]
             case "shield":
-                current_value = user_data["shield_time"]
                 current_level = Config.cfg["prices"]["shield"]["current_level"]
                 price = prices["shield"]["base_price"]
 
@@ -1352,10 +1348,15 @@ class GameHUD(HUD):
                                 / Config.user_data["hp"]
                             ),
                         }
+                        
                         Config.user_data["exp"] += self.game_data["exp"]
                         Config.user_data["credits"] += self.game_data["credits"]
-                        self.is_gaven = True
+                        
+                        with open(os.path.join("src", "cfg", "user_data.json"), "w") as f:
+                            json.dump(Config.user_data, f, indent=4)
+                        
                         Config.__init__(Config())
+                        self.is_gaven = True
 
                     self.render_game_won(surface, self.game_data)
 
@@ -1410,7 +1411,7 @@ class GameHUD(HUD):
         surface.blit(overlay, (0, 0))
 
         won_text = Font.MINECRAFT_FONT["h2"].render(
-            "Уровень пройден!", True, (56, 242, 124)
+            "Задание выполнено!", True, (56, 242, 124)
         )
         text_rect = won_text.get_rect(
             center=(Device.SCREEN_WIDTH // 2, Device.SCREEN_HEIGHT // 4)

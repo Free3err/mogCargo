@@ -17,9 +17,10 @@ class Game:
         pygame.mixer.init()
         self.cfg = Config().cfg
         self.screen = pygame.display.set_mode()
-        self.screen.set_icon(pygame.image.load("src/assets/img/icon.png"))
+        pygame.display.set_icon(pygame.image.load("src/assets/img/icon.png"))
         pygame.display.set_caption("MogCargo />")
         self.clock = pygame.time.Clock()
+
 
         self.huds = {
             "main": MainMenu(),
@@ -57,23 +58,15 @@ class Game:
             Config.__init__(Config())
 
     def play_sfx(self, sfx_name = None):
-        
-        if sfx_name and sfx_name != self.now_playing:
-            sfx = pygame.mixer.Sound(os.path.join("src", sfx_name))
-            sfx.play()
-            self.now_playing = sfx_name
-
-        else:
-            self.now_playing = None
-            if hasattr(self, "music"):
-                self.music.stop()
-            match self.hud:
-                case MainMenu():
-                    self.music = pygame.mixer.Sound("src/assets/audio/menu_music.mp3")
-                    self.music.play(-1)
-                case GameHUD():
-                    self.music = pygame.mixer.Sound(random.choice(game_music_themes))
-                    self.music.play(-1)
+        if hasattr(self, "music"):
+            self.music.stop()
+        match self.hud:
+            case MainMenu():
+                self.music = pygame.mixer.Sound("src/assets/audio/menu_music.mp3")
+                self.music.play(-1)
+            case GameHUD():
+                self.music = pygame.mixer.Sound(random.choice(game_music_themes))
+                self.music.play(-1)
 
     def start_screen(self):
         start_surface = pygame.Surface(
@@ -240,12 +233,10 @@ class Game:
 
                 if (
                     isinstance(self.hud, GameHUD)
-                    and event.type == pygame.KEYDOWN
-                    and event.key == pygame.K_ESCAPE
                 ):
-                    self.hud.pause = not self.hud.pause
-                    if self.hud.ship.delivered:
-                        self.play_sfx("assets/audio/win_music.mp3")
+                    if (event.type == pygame.KEYDOWN
+                    and event.key == pygame.K_ESCAPE):
+                        self.hud.pause = not self.hud.pause
 
             self.render()
             pygame.display.flip()

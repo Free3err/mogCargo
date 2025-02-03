@@ -5,7 +5,6 @@ import time
 
 from ...constants import Device, Shield
 from ...cfg.config import Config
-from . import Asteroid
 
 
 class Ship(pygame.sprite.Sprite):
@@ -15,6 +14,19 @@ class Ship(pygame.sprite.Sprite):
         pygame.image.load("src/assets/img/entities/ship/based/3.png"),
         pygame.image.load("src/assets/img/entities/ship/based/4.png"),
     ]
+    
+    frames = {
+        "idle": [
+            pygame.image.load("src/assets/img/entities/ship/engines/idle.png").subsurface((i * 6, 0, 6, 6))
+            for i in range(4)
+        ],
+        "powering": [
+            pygame.image.load("src/assets/img/entities/ship/engines/powering.png").subsurface((i * 6, 0, 6, 6))
+            for i in range(4)
+        ],
+    }
+
+
 
     def __init__(self, pos, start_planet, end_planet, space, *groups):
         super().__init__(*groups)
@@ -63,6 +75,8 @@ class Ship(pygame.sprite.Sprite):
         self.hp = Config.user_data["hp"]
         self.delivered = False
         self.has_cargo = False
+        self.cur_animation = "idle"
+        self.frame = 0
 
         # Границы мира
         self.world_width = Device.SCREEN_WIDTH * 3
@@ -186,9 +200,9 @@ class Ship(pygame.sprite.Sprite):
                 (self.rect.centerx - self.end_planet.rect.centerx) ** 2
                 + (self.rect.centery - self.end_planet.rect.centery) ** 2
             )
-            if distance_start <= 300:
+            if distance_start <= 225:
                 self.has_cargo = True
-            if distance_end <= 300 and self.has_cargo:
+            if distance_end <= 225 and self.has_cargo:
                 self.delivered = True
 
         # Обновление спрайта
@@ -214,3 +228,15 @@ class Ship(pygame.sprite.Sprite):
             self.body.position = pymunk.Vec2d(
                 self.body.position.x, self.rect.height / 2
             )
+            
+    def animate(self, animation_name, orig_img):
+        if self.cur_animation != animation_name:
+            self.cur_animation = animation_name
+            self.frame = 0
+
+
+        self.image = Ship.frames[self.cur_animation][self.frame]
+        self.image = pygame.transform.scale(self.image, (100, 100))
+        self.image.blit(orig_img, (0, 0))
+        self.frame += 1
+        self.frame += min(3, self.frame)
