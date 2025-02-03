@@ -12,6 +12,8 @@ class Config:
             cls.cfg["keymapping"] = json.load(file)
         with open(os.path.join("src", "cfg", "levels_cfg.json"), "r") as file:
             cls.cfg["levels"] = json.load(file)
+        with open(os.path.join("src", "cfg", "prices.json"), "r") as file:
+            cls.cfg["prices"] = json.load(file)
 
     @classmethod 
     def initialize(cls):

@@ -1,13 +1,13 @@
 {
-    "exp": 20,
+    "exp": 0,
     "level": "0",
-    "level_percent": 0.4,
+    "level_percent": 0.0,
     "credits": 200,
-    "boost_time": 10,
+    "boost_time": 15,
     "boost_multiplier": 1.5,
     "boost_cooldown": 30,
     "shield_time": 15,
     "shield_cooldown": 45,
-    "max_speed": 8,
-    "hp": 4
+    "max_speed": 13,
+    "hp": 8
 }

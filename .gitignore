@@ -1,0 +1,42 @@
+# Байткод Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Дистрибутивы и сборки
+dist/
+build/
+*.egg-info/
+
+# Виртуальное окружение
+venv/
+env/
+.env/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Логи и временные файлы
+*.log
+*.tmp
+.DS_Store
+
+# Файлы настроек и локальные конфигурации
+.env
+.env.local
+settings.local.json
+
+# Файлы базы данных
+*.db
+*.sqlite3
+
+# Файлы тестового покрытия
+.coverage
+htmlcov/
+
+# Другие файлы
+*.bak
+*.backup

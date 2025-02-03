@@ -5,6 +5,7 @@ import time
 
 from ...constants import Device, Shield
 from ...cfg.config import Config
+from . import Asteroid
 
 
 class Ship(pygame.sprite.Sprite):
@@ -12,10 +13,10 @@ class Ship(pygame.sprite.Sprite):
         pygame.image.load("src/assets/img/entities/ship/based/1.png"),
         pygame.image.load("src/assets/img/entities/ship/based/2.png"),
         pygame.image.load("src/assets/img/entities/ship/based/3.png"),
-        pygame.image.load("src/assets/img/entities/ship/based/4.png")
+        pygame.image.load("src/assets/img/entities/ship/based/4.png"),
     ]
 
-    def __init__(self, pos, space, *groups):
+    def __init__(self, pos, start_planet, end_planet, space, *groups):
         super().__init__(*groups)
         self.space = space
 
@@ -61,6 +62,7 @@ class Ship(pygame.sprite.Sprite):
         # Другое
         self.hp = Config.user_data["hp"]
         self.delivered = False
+        self.has_cargo = False
 
         # Границы мира
         self.world_width = Device.SCREEN_WIDTH * 3
@@ -68,10 +70,13 @@ class Ship(pygame.sprite.Sprite):
 
         # Другое
         self.shield_surface = pygame.Surface((140, 140), pygame.SRCALPHA)
+        self.start_planet = start_planet
+        self.end_planet = end_planet
 
     def handle_collision(self, arbiter, space, data):
         if not self.shield_active:
             self.hp -= 1
+
         return True
 
     def update(self):
@@ -89,9 +94,9 @@ class Ship(pygame.sprite.Sprite):
 
         # Управление ускорением
         if (
-                keys[Config.cfg["keymapping"]["boost"]]
-                and self.boost_available
-                and not self.boost_active
+            keys[Config.cfg["keymapping"]["boost"]]
+            and self.boost_available
+            and not self.boost_active
         ):
             self.boost_active = True
             self.boost_available = False
@@ -171,9 +176,26 @@ class Ship(pygame.sprite.Sprite):
             if elapsed_time >= Config.user_data["shield_cooldown"]:
                 self.shield_available = True
 
+        # Взаимодействие
+        if keys[Config.cfg["keymapping"]["interaction"]]:
+            distance_start = math.sqrt(
+                (self.rect.centerx - self.start_planet.rect.centerx) ** 2
+                + (self.rect.centery - self.start_planet.rect.centery) ** 2
+            )
+            distance_end = math.sqrt(
+                (self.rect.centerx - self.end_planet.rect.centerx) ** 2
+                + (self.rect.centery - self.end_planet.rect.centery) ** 2
+            )
+            if distance_start <= 300:
+                self.has_cargo = True
+            if distance_end <= 300 and self.has_cargo:
+                self.delivered = True
+
         # Обновление спрайта
         sprite_index = min(max(0, 4 - self.hp), 3)
-        self.image = pygame.transform.rotate(pygame.transform.scale(Ship.imgs[sprite_index], (100, 100)), self.angle)
+        self.image = pygame.transform.rotate(
+            pygame.transform.scale(Ship.imgs[sprite_index], (100, 100)), self.angle
+        )
         self.rect = self.image.get_rect(center=self.body.position)
 
         # Проверка границ карты

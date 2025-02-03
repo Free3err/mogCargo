@@ -42,10 +42,8 @@ class Shield:
 developer_elem = Font.MINECRAFT_FONT["small"].render(
     "© free3err. GNU GPL v3.0 License", True, (255, 255, 255)
 )
-version_elem = Font.MINECRAFT_FONT["small"].render("v0.5.2", True, (255, 255, 255))
+version_elem = Font.MINECRAFT_FONT["small"].render("v0.8.1 (beta)", True, (255, 255, 255))
 game_music_themes = [
-    os.path.join("src", "assets", "audio", "game_themes", "Exploding Sun.mp3"),
-    os.path.join("src", "assets", "audio", "game_themes", "Industrial Planet.mp3"),
-    os.path.join("src", "assets", "audio", "game_themes", "Star Militia.mp3"),
-    os.path.join("src", "assets", "audio", "game_themes", "Space Main Theme.mp3"),
+    os.path.join("src", "assets", "audio", "game_themes", file)
+    for file in os.listdir(os.path.join("src", "assets", "audio", "game_themes"))
 ]

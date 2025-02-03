@@ -1,0 +1,22 @@
+{
+    "speed": {
+        "base_price": 300,
+        "current_level": 1,
+        "max_level": 10
+    },
+    "shield": {
+        "base_price": 300,
+        "current_level": 1,
+        "max_level": 10
+    },
+    "boost": {
+        "base_price": 300,
+        "current_level": 1,
+        "max_level": 10
+    },
+    "hp": {
+        "base_price": 500,
+        "current_level": 1,
+        "max_level": 10
+    }
+}

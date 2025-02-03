@@ -17,6 +17,7 @@ class Game:
         pygame.mixer.init()
         self.cfg = Config().cfg
         self.screen = pygame.display.set_mode()
+        self.screen.set_icon(pygame.image.load("src/assets/img/icon.png"))
         pygame.display.set_caption("MogCargo />")
         self.clock = pygame.time.Clock()
 
@@ -31,7 +32,8 @@ class Game:
         self.waiting_for_key = False
         self.key_to_set = None
         self.camera = None
-        
+        self.now_playing = None
+
         self.music = pygame.mixer.Sound("src/assets/audio/menu_music.mp3")
         self.music.play(-1)
 
@@ -54,17 +56,24 @@ class Game:
             self.key_to_set = None
             Config.__init__(Config())
 
-    def play_sfx(self):
-        if hasattr(self, 'music'):
-            self.music.stop()
-            
-        match self.hud:
-            case MainMenu():
-                self.music = pygame.mixer.Sound("src/assets/audio/menu_music.mp3")
-                self.music.play(-1)
-            case GameHUD():
-                self.music = pygame.mixer.Sound(random.choice(game_music_themes))
-                self.music.play(-1)
+    def play_sfx(self, sfx_name = None):
+        
+        if sfx_name and sfx_name != self.now_playing:
+            sfx = pygame.mixer.Sound(os.path.join("src", sfx_name))
+            sfx.play()
+            self.now_playing = sfx_name
+
+        else:
+            self.now_playing = None
+            if hasattr(self, "music"):
+                self.music.stop()
+            match self.hud:
+                case MainMenu():
+                    self.music = pygame.mixer.Sound("src/assets/audio/menu_music.mp3")
+                    self.music.play(-1)
+                case GameHUD():
+                    self.music = pygame.mixer.Sound(random.choice(game_music_themes))
+                    self.music.play(-1)
 
     def start_screen(self):
         start_surface = pygame.Surface(
@@ -145,7 +154,7 @@ class Game:
                 if event.type == pygame.QUIT:
                     running = False
                     break
-                
+
                 if self.waiting_for_key:
                     self.handle_key_setting(event)
                     continue
@@ -174,8 +183,6 @@ class Game:
                             self.set_key("right")
                         elif self.hud.elements["boost_btn"].collidepoint(mouse_pos):
                             self.set_key("boost")
-                        elif self.hud.elements["shot_btn"].collidepoint(mouse_pos):
-                            self.set_key("shot")
                         elif self.hud.elements["shield_btn"].collidepoint(mouse_pos):
                             self.set_key("shield")
                         elif self.hud.elements["interaction_btn"].collidepoint(
@@ -205,12 +212,29 @@ class Game:
                             self.hud = self.huds["game_hud"]
                             self.hud.start_time = pygame.time.get_ticks()
                             self.play_sfx()
+                        elif self.hud.elements["hp_upgrade"].collidepoint(mouse_pos):
+                            self.hud.try_purchase_upgrade("hp")
+                        elif self.hud.elements["speed_upgrade"].collidepoint(mouse_pos):
+                            self.hud.try_purchase_upgrade("speed")
+                        elif self.hud.elements["boost_upgrade"].collidepoint(mouse_pos):
+                            self.hud.try_purchase_upgrade("boost")
+                        elif self.hud.elements["shield_upgrade"].collidepoint(mouse_pos):
+                            self.hud.try_purchase_upgrade("shield")
 
                     elif isinstance(self.hud, GameHUD):
                         if self.hud.pause:
                             if self.hud.elements["продолжить"].collidepoint(mouse_pos):
                                 self.hud.pause = False
                             elif self.hud.elements["выйти"].collidepoint(mouse_pos):
+                                self.hud = self.huds["main"]
+                                self.play_sfx()
+                        elif self.hud.ship.hp <= 0 or self.hud.ship.delivered:
+                            if self.hud.elements["заново"].collidepoint(mouse_pos):
+                                self.huds["game_hud"] = GameHUD()
+                                self.hud = self.huds["game_hud"]
+                                self.hud.start_time = pygame.time.get_ticks()
+                                self.play_sfx()
+                            elif self.hud.elements["главное меню"].collidepoint(mouse_pos):
                                 self.hud = self.huds["main"]
                                 self.play_sfx()
 
@@ -220,6 +244,8 @@ class Game:
                     and event.key == pygame.K_ESCAPE
                 ):
                     self.hud.pause = not self.hud.pause
+                    if self.hud.ship.delivered:
+                        self.play_sfx("assets/audio/win_music.mp3")
 
             self.render()
             pygame.display.flip()
